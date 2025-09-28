@@ -49,12 +49,14 @@ export const loginUser = async (loginData) => {
         body: JSON.stringify(loginData),
     });
 
+    console.log("Login Response Status:", response);
+
     if (!response.ok) {
         // Handle 401 Unauthorized or other errors
         const errorData = await response.json().catch(() => ({}));
         
         if (response.status === 401) {
-            throw new Error("Invalid username or password.");
+            throw new Error("Recheck username and password. OR Account is not active or you din't have Athorize to access this");
         }
         
         throw new Error(errorData.title || errorData.message || 'Login failed due to a server error.');
