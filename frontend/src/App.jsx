@@ -7,7 +7,7 @@ import RegisterPage from './pages/RegisterPage';
 // Dashboard Components
 import DashboardLayout from './components/DashboardLayout';
 import DashboardPage from './pages/DashboardPage';
-import UserManagement from './pages/UserManagement';
+import UserManagementPage from './pages/UserManagementPage';
 import StationManagement from './pages/StationManagement';
 import AllBookings from './pages/AllBookings';
 
@@ -52,7 +52,7 @@ function App() {
             {/* Backoffice Admin Routes */}
             <Route 
                 path="/dashboard/users" 
-                element={<ProtectedRoute allowedRoles={["Backoffice"]}><UserManagement /></ProtectedRoute>} 
+                element={<ProtectedRoute allowedRoles={["Backoffice"]}><UserManagementPage /></ProtectedRoute>} 
             />
             <Route 
                 path="/dashboard/stations" 
