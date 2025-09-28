@@ -39,7 +39,7 @@ export const registerUser = async (userData) => {
  * @returns {object} Response data, typically containing a JWT Token.
  */
 export const loginUser = async (loginData) => {
-    const url = `${API_BASE_URL}/Auth/login`;
+    const url = `${API_BASE_URL}/auth/login`;
 
     const response = await fetch(url, {
         method: 'POST',

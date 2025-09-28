@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useForm } from './useForm'; // Reusing your existing form hook
 import { loginUser } from '../api/AuthApi';
 import { useAuth } from '../context/AuthContext'; // Reusing your Auth context
+import { jwtDecode } from "jwt-decode";
 
 const INITIAL_FORM_STATE = {
     username: '',
@@ -30,26 +31,41 @@ export const useLogin = () => {
         try {
             // 1. Call the API
             const response = await loginUser(values);
-            
-            // 2. Extract token and store it using AuthContext
+
+            // 2. Extract token
             const token = response.token;
-            
-            // NOTE: In a real app, you would decode the token (or make another API call) 
-            // to get user details (username, role, etc.) before calling login(token, user).
-            // For now, we pass the token and basic user info.
-            const userData = { username: values.username, role: "Unknown" }; // Placeholder user data
-            
-            login(token, userData); 
-            
+
+            // 3. Decode token to extract user info
+            const decoded = jwtDecode(token);
+
+            // decoded looks like:
+            // {
+            //   "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name": "sehandevinda1@gmail.com",
+            //   "http://schemas.microsoft.com/ws/2008/06/identity/claims/role": "Backoffice",
+            //   "userId": "68d789b1863c4721a958d956",
+            //   "exp": 1759078695,
+            //   "iss": "http://localhost:5033",
+            //   "aud": "http://localhost:3000"
+            // }
+
+            const userData = {
+                userId: decoded.userId,
+                username: decoded["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"],
+                role: decoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"]
+            };
+
+            // 4. Store token + userData in AuthContext
+            login(token, userData);
+
             resetForm();
-            // Optional: return success or redirect the user (handled in the component)
-            return true; 
+            return true;
         } catch (err) {
-            setError(err.message || 'An unexpected error occurred during login.');
+            setError(err.message || "An unexpected error occurred during login.");
             return false;
         } finally {
             setLoading(false);
         }
+
     };
 
     return {

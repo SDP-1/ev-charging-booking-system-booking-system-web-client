@@ -1,34 +1,73 @@
-// src/App.jsx (UPDATED)
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { useAuth } from './context/AuthContext';
 
-import { Routes, Route, Link } from 'react-router-dom';
-import RegisterPage from './pages/RegisterPage'; 
 import LoginPage from './pages/LoginPage';
-// You'll need to create these dummy pages for testing the routing
-const HomePage = () => <h1 className="text-3xl p-8">Welcome Home!</h1>;
-// const LoginPage = () => <h1 className="text-3xl p-8">Login Page Placeholder</h1>;
+import RegisterPage from './pages/RegisterPage';
+
+// Dashboard Components
+import DashboardLayout from './components/DashboardLayout';
+import DashboardPage from './pages/DashboardPage';
+import UserManagement from './pages/UserManagement';
+import StationManagement from './pages/StationManagement';
+import AllBookings from './pages/AllBookings';
+
+// ----------------------------------------------------------------------
+// Protected Route Component
+const ProtectedRoute = ({ children, allowedRoles }) => {
+    const { user, token } = useAuth();
+    
+    if (!token) {
+        // Not logged in: Redirect to login
+        return <Navigate to="/login" replace />;
+    }
+
+    if (allowedRoles && user && !allowedRoles.includes(user.role)) {
+        // Logged in but wrong role: Redirect to unauthorized page (or home)
+        return <h1 className="text-red-500 p-8">403 Forbidden: Insufficient role.</h1>;
+    }
+
+    return <DashboardLayout>{children}</DashboardLayout>;
+};
+// ----------------------------------------------------------------------
 
 function App() {
-  return (
-    <>
-      {/* Simple Navigation for demonstration */}
-      <nav className="p-4 bg-gray-800 text-white flex space-x-4">
-        <Link to="/" className="hover:text-indigo-400">Home</Link>
-        <Link to="/login" className="hover:text-indigo-400">Login</Link>
-        <Link to="/register" className="hover:text-indigo-400">Register</Link>
-      </nav>
+    return (
+        <Routes>
+            {/* Public Routes */}
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
-      {/* Define application routes */}
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        {/* The Register Page */}
-        <Route path="/register" element={<RegisterPage />} />
-        {/* Placeholder for Login Page (as per your backend structure) */}
-        <Route path="/login" element={<LoginPage />} />
-        {/* Fallback route for 404 */}
-        <Route path="*" element={<h1 className="text-red-500 p-8">404 Not Found</h1>} />
-      </Routes>
-    </>
-  );
+            {/* Protected Dashboard Routes 
+            We use a single DashboardLayout wrapper for the main dashboard views
+            */}
+            
+            {/* General Dashboard (All Roles) */}
+            <Route 
+                path="/dashboard" 
+                element={<ProtectedRoute allowedRoles={["Backoffice", "StationOperator", "EVOwner"]}><DashboardPage /></ProtectedRoute>} 
+            />
+            
+            {/* Backoffice Admin Routes */}
+            <Route 
+                path="/dashboard/users" 
+                element={<ProtectedRoute allowedRoles={["Backoffice"]}><UserManagement /></ProtectedRoute>} 
+            />
+            <Route 
+                path="/dashboard/stations" 
+                element={<ProtectedRoute allowedRoles={["Backoffice"]}><StationManagement /></ProtectedRoute>} 
+            />
+
+            <Route 
+                path="/dashboard/all-bookings" 
+                element={<ProtectedRoute allowedRoles={["Backoffice"]}><AllBookings /></ProtectedRoute>} 
+            />
+
+            {/* Fallback */}
+            <Route path="*" element={<h1 className="text-red-500 p-8">404 Page Not Found</h1>} />
+        </Routes>
+    );
 }
 
 export default App;
