@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 
 // Simple component to display status visually
 const StatusPill = ({ status, isTrue }) => {
-    const color = isTrue 
+    const color = isTrue
         ? (status === 'Canceled' ? 'bg-red-200 text-red-800' : 'bg-green-200 text-green-800')
         : 'bg-gray-200 text-gray-800';
     return (
@@ -51,11 +51,11 @@ const AllBookings = () => {
     if (loading) return <p className="p-8 text-lg">Loading bookings...</p>;
     if (error) return <p className="p-8 text-lg text-red-600">Error: {error}</p>;
     if (user.role !== 'Backoffice') return <p className="p-8 text-lg text-red-600">Access Denied: Only Backoffice can view all bookings.</p>;
-    
+
     return (
         <>
             <h2 className="text-3xl font-semibold mb-6">All Bookings Management</h2>
-            
+
             {/* Filter and Controls */}
             <div className="bg-white p-4 rounded-lg shadow-lg mb-6 flex items-center space-x-4">
                 <label htmlFor="userIdFilter" className="text-gray-600 font-medium">Filter by User ID:</label>
@@ -67,8 +67,8 @@ const AllBookings = () => {
                     onChange={handleFilterChange}
                     className="p-2 border border-gray-300 rounded-md w-96 focus:ring-indigo-500 focus:border-indigo-500"
                 />
-                <button 
-                    onClick={() => setFilterUserId('')} 
+                <button
+                    onClick={() => setFilterUserId('')}
                     className="px-4 py-2 text-sm bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors"
                 >
                     Clear Filter
@@ -89,6 +89,9 @@ const AllBookings = () => {
                             </th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Station
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Slot ID
                             </th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Reservation Time
@@ -119,6 +122,9 @@ const AllBookings = () => {
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                         {booking.stationId}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 truncate" title={booking.slotId}>
+                                        {String(booking.slotId).substring(0, 8)}...
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                         {new Date(booking.reservationDateTime).toLocaleString()}

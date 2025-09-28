@@ -5,6 +5,7 @@ export const BookingModel = {
     id: '',                      // MongoDB ObjectId as string
     userId: '',                  // EVOwner ID
     stationId: '',               // Charging station ID
+    slotId: '',                  // <-- NEW FIELD: link to ChargingSlot
     reservationDateTime: '',     // DateTime string
     approved: false,             // Approved by backoffice
     confirmed: false,            // Confirmed by station operator
