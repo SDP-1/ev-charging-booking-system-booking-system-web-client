@@ -52,6 +52,52 @@ const AllBookings = () => {
     if (error) return <p className="p-8 text-lg text-red-600">Error: {error}</p>;
     if (user.role !== 'Backoffice') return <p className="p-8 text-lg text-red-600">Access Denied: Only Backoffice can view all bookings.</p>;
 
+    // Cancel a booking
+    const handleCancel = async (bookingId) => {
+        if (!window.confirm("Are you sure you want to cancel this booking?")) return;
+        try {
+            const token = localStorage.getItem("token");
+            const res = await fetch(`${BASE}/booking/cancel/${bookingId}`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+            if (!res.ok) throw new Error(`Failed to cancel booking (${res.status})`);
+            alert("Booking canceled successfully.");
+            // Refresh bookings
+            const data = await getAllBookings(filterUserId || null);
+            setBookings(data);
+        } catch (err) {
+            alert(err.message || "Failed to cancel booking.");
+        }
+    };
+
+    // Update a booking (example: changing slot or station)
+    const handleUpdate = async (bookingId, updates) => {
+        // updates = { slotId: "...", stationId: "..." }
+        const token = localStorage.getItem("token");
+        try {
+            const res = await fetch(`${BASE}/booking/update/${bookingId}`, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify(updates),
+            });
+            if (!res.ok) throw new Error(`Failed to update booking (${res.status})`);
+            alert("Booking updated successfully.");
+            // Refresh bookings
+            const data = await getAllBookings(filterUserId || null);
+            setBookings(data);
+        } catch (err) {
+            alert(err.message || "Failed to update booking.");
+        }
+    };
+
+
     return (
         <>
             <h2 className="text-3xl font-semibold mb-6">All Bookings Management</h2>
@@ -144,8 +190,23 @@ const AllBookings = () => {
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                         {/* Backoffice actions placeholder */}
+                                        <button
+                                            className="text-indigo-600 hover:text-indigo-900 mr-3"
+                                            onClick={() => {
+                                                // Example: open modal to update stationId or slotId
+                                                const newSlotId = prompt("Enter new Slot ID:");
+                                                if (newSlotId) handleUpdate(booking.id, { slotId: newSlotId });
+                                            }}
+                                        >
+                                            Update
+                                        </button>
                                         <button className="text-indigo-600 hover:text-indigo-900 mr-3">View</button>
-                                        <button className="text-red-600 hover:text-red-900">Cancel</button>
+                                        <button
+                                            className="text-red-600 hover:text-red-900"
+                                            onClick={() => handleCancel(booking.id)}
+                                        >
+                                            Cancel
+                                        </button>
                                     </td>
                                 </tr>
                             ))

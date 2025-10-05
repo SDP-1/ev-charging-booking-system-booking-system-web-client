@@ -38,30 +38,29 @@ export const registerUser = async (userData) => {
  * @param {object} loginData - Object containing username and password.
  * @returns {object} Response data, typically containing a JWT Token.
  */
-export const loginUser = async (loginData) => {
-    const url = `${API_BASE_URL}/auth/login`;
+export const loginUser = async ({ username, password }) => {
+  const url = `${API_BASE_URL}/auth/login`;
 
-    const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(loginData),
-    });
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    // Backend wants PascalCase:
+    body: JSON.stringify({ Username: username, Password: password }),
+  });
 
-    console.log("Login Response Status:", response);
-
-    if (!response.ok) {
-        // Handle 401 Unauthorized or other errors
-        const errorData = await response.json().catch(() => ({}));
-        
-        if (response.status === 401) {
-            throw new Error("Recheck username and password. OR Account is not active or you din't have Athorize to access this");
-        }
-        
-        throw new Error(errorData.title || errorData.message || 'Login failed due to a server error.');
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    if (res.status === 401) {
+      throw new Error(
+        "Recheck username and password. OR Account is not active or you don't have authorization to access this."
+      );
     }
+    throw new Error(err.title || err.message || 'Login failed due to a server error.');
+  }
 
-    // Backend returns { Token: "jwt_string..." }
-    return response.json(); 
+  // Accept either { Token } or { token }
+  const data = await res.json();
+  const token = data.Token || data.token;
+  if (!token) throw new Error('Login succeeded but no token returned by server.');
+  return { token, ...data };
 };

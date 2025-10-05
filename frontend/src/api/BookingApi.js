@@ -45,7 +45,7 @@ const fetchAuthenticated = async (url, method = 'GET', body = null) => {
  * @returns {Array<BookingModel>} List of bookings.
  */
 export const getAllBookings = async (userId = null) => {
-    let url = `${API_BASE_URL}/Booking/all`;
+    let url = `${API_BASE_URL}/booking/all`;
     if (userId) {
         // Append query parameter for filtering
         url += `?userId=${userId}`;
