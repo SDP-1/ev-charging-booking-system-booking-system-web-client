@@ -18,7 +18,7 @@ export const DASHBOARD_ROUTES = [
         name: "Station Management",
         path: "/dashboard/stations",
         icon: "fa-solid fa-charging-station",
-        roles: ["Backoffice"],
+        roles: ["Backoffice", "StationOperator"],
     },
     {
         name: "All Bookings",

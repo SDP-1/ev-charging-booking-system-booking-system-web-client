@@ -8,14 +8,16 @@ import RegisterPage from './pages/RegisterPage';
 import DashboardLayout from './components/DashboardLayout';
 import DashboardPage from './pages/DashboardPage';
 import UserManagementPage from './pages/UserManagementPage';
-import StationManagement from './pages/StationManagement';
 import AllBookings from './pages/AllBookings';
+import ChargingStations from './pages/ChargingStations';
+import CreateStation from './pages/CreateStation';
+import StationSlots from './pages/StationSlots';
 
 // ----------------------------------------------------------------------
 // Protected Route Component
 const ProtectedRoute = ({ children, allowedRoles }) => {
     const { user, token } = useAuth();
-    
+
     if (!token) {
         // Not logged in: Redirect to login
         return <Navigate to="/login" replace />;
@@ -36,32 +38,44 @@ function App() {
             {/* Public Routes */}
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
-            
+
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
             {/* Protected Dashboard Routes 
             We use a single DashboardLayout wrapper for the main dashboard views
             */}
-            
+
             {/* General Dashboard (All Roles) */}
-            <Route 
-                path="/dashboard" 
-                element={<ProtectedRoute allowedRoles={["Backoffice", "StationOperator", "EVOwner"]}><DashboardPage /></ProtectedRoute>} 
-            />
-            
-            {/* Backoffice Admin Routes */}
-            <Route 
-                path="/dashboard/users" 
-                element={<ProtectedRoute allowedRoles={["Backoffice"]}><UserManagementPage /></ProtectedRoute>} 
-            />
-            <Route 
-                path="/dashboard/stations" 
-                element={<ProtectedRoute allowedRoles={["Backoffice"]}><StationManagement /></ProtectedRoute>} 
+            <Route
+                path="/dashboard"
+                element={<ProtectedRoute allowedRoles={["Backoffice", "StationOperator", "EVOwner"]}><DashboardPage /></ProtectedRoute>}
             />
 
-            <Route 
-                path="/dashboard/all-bookings" 
-                element={<ProtectedRoute allowedRoles={["Backoffice"]}><AllBookings /></ProtectedRoute>} 
+            {/* Backoffice Admin Routes */}
+            <Route
+                path="/dashboard/users"
+                element={<ProtectedRoute allowedRoles={["Backoffice"]}><UserManagementPage /></ProtectedRoute>}
+            />
+            <Route
+                path="/dashboard/stations"
+                element={<ProtectedRoute allowedRoles={["Backoffice", "StationOperator"]}><ChargingStations /></ProtectedRoute>}
+            />
+            <Route
+                path="/dashboard/stations/create"
+                element={<ProtectedRoute allowedRoles={["Backoffice", "StationOperator"]}><CreateStation /></ProtectedRoute>}
+            />
+            <Route
+                path="/dashboard/stations/:stationId/book"
+                element={
+                    <ProtectedRoute allowedRoles={["Backoffice", "StationOperator"]}>
+                        <StationSlots />
+                    </ProtectedRoute>
+                }
+            />
+
+            <Route
+                path="/dashboard/all-bookings"
+                element={<ProtectedRoute allowedRoles={["Backoffice"]}><AllBookings /></ProtectedRoute>}
             />
 
             {/* Fallback */}

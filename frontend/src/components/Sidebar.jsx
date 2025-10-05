@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { DASHBOARD_ROUTES } from '../data/dashboardNav';
-import { HiHome, HiUsers, HiCog, HiChartBar, HiLightningBolt, HiLogout } from 'react-icons/hi';
+import { HiHome, HiUsers, HiCog, HiChartBar, HiLightningBolt, HiLogout, HiOfficeBuilding } from 'react-icons/hi';
 import LogoutConfirmModal from './common/LogoutConfirmModal';
 
 // Icon mapping for routes (using react-icons/hi)
@@ -11,6 +11,7 @@ const routeIcons = {
   users: <HiUsers className="w-5 h-5 text-indigo-400" />,
   settings: <HiCog className="w-5 h-5 text-indigo-400" />,
   reports: <HiChartBar className="w-5 h-5 text-indigo-400" />,
+  stations: <HiOfficeBuilding className="w-5 h-5 text-indigo-400" />,
 };
 
 const Sidebar = () => {
