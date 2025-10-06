@@ -1,6 +1,5 @@
 // src/pages/AllBookings.jsx
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { getAllBookings } from '../api/BookingApi'; // Import the new API function
 import { useAuth } from '../context/AuthContext';
 import { 
@@ -9,68 +8,16 @@ import {
   HiCheckCircle, 
   HiXCircle, 
   HiSearch, 
-  HiCalendar 
+  HiCalendar,
+  HiEye,
+  HiTrash,
+  HiPlay // Using HiPlay as alternative for reopen/refresh action
 } from 'react-icons/hi';
 
-// Simple component to display status visually
-const StatusPill = ({ status }) => {
-  const statusConfig = {
-    'Pending': { bg: 'bg-yellow-100', text: 'text-yellow-800' },
-    'Approved': { bg: 'bg-blue-100', text: 'text-blue-800' },
-    'Confirmed': { bg: 'bg-green-100', text: 'text-green-800' },
-    'Completed': { bg: 'bg-indigo-100', text: 'text-indigo-800' },
-    'Canceled': { bg: 'bg-red-100', text: 'text-red-800' },
-  };
-  const config = statusConfig[status] || { bg: 'bg-gray-100', text: 'text-gray-800' };
-  return (
-    <span className={`px-2.5 py-1 text-xs font-semibold rounded-full ${config.bg} ${config.text} ring-1 ring-inset ring-gray-200`}>
-      {status}
-    </span>
-  );
-};
-
-// Confirm Cancel Modal (simple reusable)
-const ConfirmCancelModal = ({ isOpen, onConfirm, onClose, bookingId }) => {
-  if (!isOpen) return null;
-  return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onClick={onClose}></div>
-        <div className="relative transform overflow-hidden rounded-2xl bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-md">
-          <div className="bg-white px-4 pb-4 pt-5 sm:p-6 sm:pb-4">
-            <div className="sm:flex sm:items-start">
-              <div className="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
-                <HiXCircle className="h-6 w-6 text-red-600" />
-              </div>
-              <div className="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left">
-                <h3 className="text-base font-semibold leading-6 text-gray-900">Cancel Booking</h3>
-                <div className="mt-2">
-                  <p className="text-sm text-gray-500">Are you sure you want to cancel this booking? This action cannot be undone.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
-            <button
-              type="button"
-              onClick={() => onConfirm(bookingId)}
-              className="inline-flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 sm:ml-3 sm:w-auto"
-            >
-              Cancel Booking
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
+// Import separated components
+import StatusPill from '../components/common/StatusPill';
+import BookingDetailsModal from '../components/modals/BookingDetailsModal';
+import ConfirmCancelModal from '../components/modals/ConfirmCancelModal';
 
 const AllBookings = () => {
     const { user } = useAuth();
@@ -84,7 +31,9 @@ const AllBookings = () => {
 
     // Modal states
     const [showCancelModal, setShowCancelModal] = useState(false);
+    const [showDetailsModal, setShowDetailsModal] = useState(false);
     const [selectedBookingId, setSelectedBookingId] = useState(null);
+    const [selectedBooking, setSelectedBooking] = useState(null);
 
     // Fetch data whenever filters change
     useEffect(() => {
@@ -117,11 +66,15 @@ const AllBookings = () => {
         // Date range filter
         if (filterDateFrom || filterDateTo) {
             const fromDate = filterDateFrom ? new Date(filterDateFrom).toISOString() : null;
-            const toDate = filterDateTo ? new Date(filterDateTo).setHours(23, 59, 59, 999) : null; // End of day
+            const toDateObj = filterDateTo ? new Date(filterDateTo) : null;
+            if (toDateObj) {
+                toDateObj.setHours(23, 59, 59, 999);
+            }
+            const toDate = toDateObj ? toDateObj.toISOString() : null;
             filtered = filtered.filter(b => {
                 const bookingDate = new Date(b.reservationDateTime).toISOString();
                 if (fromDate && bookingDate < fromDate) return false;
-                if (toDate && bookingDate > new Date(toDate).toISOString()) return false;
+                if (toDate && bookingDate > toDate) return false;
                 return true;
             });
         }
@@ -161,9 +114,62 @@ const AllBookings = () => {
     };
 
     // Refresh data
-    const refreshData = () => {
-        setFilterUserId(''); // Reset to fetch all
-        // Trigger refetch via useEffect
+    const refreshData = async () => {
+        // Fetch with current filterUserId
+        setLoading(true);
+        setError(null);
+        try {
+            const data = await getAllBookings(filterUserId || null);
+            setBookings(data);
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // View booking details
+    const handleView = (booking) => {
+        setSelectedBooking(booking);
+        setShowDetailsModal(true);
+    };
+
+    // Update status
+    const handleStatusUpdate = async (bookingId, action) => {
+        try {
+            const token = localStorage.getItem("token");
+            const BASE = import.meta.env.VITE_API_BASE_URL;
+            let endpoint = '';
+            switch (action) {
+                case 'approve':
+                    endpoint = `${BASE}/booking/approve/${bookingId}`;
+                    break;
+                case 'confirm':
+                    endpoint = `${BASE}/booking/confirm/${bookingId}`;
+                    break;
+                case 'complete':
+                    endpoint = `${BASE}/booking/complete/${bookingId}`;
+                    break;
+                case 'reopen':
+                    endpoint = `${BASE}/booking/reopen/${bookingId}`;
+                    break;
+                default:
+                    return;
+            }
+            const res = await fetch(endpoint, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+            if (!res.ok) throw new Error(`Failed to update status (${res.status})`);
+            // Refresh bookings
+            const data = await getAllBookings(filterUserId || null);
+            setBookings(data);
+        } catch (err) {
+            setError(err.message || "Failed to update booking status.");
+        }
     };
 
     // Cancel a booking
@@ -188,11 +194,18 @@ const AllBookings = () => {
         setShowCancelModal(false);
     };
 
-    // Update a booking (placeholder - open modal or implement)
-    const handleUpdate = async (bookingId, updates) => {
-        // Implementation similar to cancel - use modal for UX
-        console.log('Update booking:', bookingId, updates);
-    };
+    // Action button component for status updates
+    const ActionButton = ({ action, label, icon: Icon, onClick, disabled = false, className = '', title = '' }) => (
+        <button
+            onClick={onClick}
+            disabled={disabled}
+            className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none disabled:hover:translate-y-0 ${className}`}
+            title={title || label}
+        >
+            <Icon className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">{label}</span>
+        </button>
+    );
 
     if (loading) {
         return (
@@ -443,65 +456,132 @@ const AllBookings = () => {
                                     </td>
                                 </tr>
                             ) : (
-                                filteredBookings.map((booking) => (
-                                    <tr key={String(booking.id)} className="hover:bg-gray-50 transition-colors"> {/* Hover effect */}
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900 truncate max-w-0" title={booking.id}>
-                                            {String(booking.id).substring(0, 8)}...
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 truncate max-w-0" title={booking.userId}>
-                                            {String(booking.userId).substring(0, 8)}...
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                            {booking.stationId}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-500 truncate max-w-0" title={booking.slotId}>
-                                            {String(booking.slotId).substring(0, 8)}...
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            {new Date(booking.reservationDateTime).toLocaleString()}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                            <StatusPill status={getStatus(booking)} />
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
-                                            <button
-                                                className="text-indigo-600 hover:text-indigo-900 px-3 py-1 rounded-md transition-colors"
-                                                onClick={() => {
-                                                    // Example: open modal to update or navigate to details
-                                                    alert(`View details for booking: ${booking.id}`);
-                                                }}
-                                            >
-                                                View
-                                            </button>
-                                            <button
-                                                className="text-blue-600 hover:text-blue-900 px-3 py-1 rounded-md transition-colors"
-                                                onClick={() => {
-                                                    // Example update - open modal
-                                                    const newSlotId = prompt("Enter new Slot ID (optional):");
-                                                    if (newSlotId) {
-                                                        handleUpdate(booking.id, { slotId: newSlotId });
-                                                    }
-                                                }}
-                                            >
-                                                Update
-                                            </button>
-                                            <button
-                                                className="text-red-600 hover:text-red-900 px-3 py-1 rounded-md transition-colors"
-                                                onClick={() => {
-                                                    setSelectedBookingId(booking.id);
-                                                    setShowCancelModal(true);
-                                                }}
-                                            >
-                                                Cancel
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))
+                                filteredBookings.map((booking) => {
+                                    const currentStatus = getStatus(booking);
+                                    const reservationTime = new Date(booking.reservationDateTime);
+                                    const now = new Date();
+                                    const timeDiffMs = reservationTime - now;
+                                    const isFutureReservation = timeDiffMs > 0;
+                                    const hoursUntilReservation = timeDiffMs / (1000 * 60 * 60);
+                                    const canCancel = ['Pending', 'Approved'].includes(currentStatus) && hoursUntilReservation >= 3;
+
+                                    // Define possible actions based on status (progressive flow)
+                                    const actions = [];
+                                    switch (currentStatus) {
+                                        case 'Pending':
+                                            actions.push({
+                                                action: 'approve',
+                                                label: 'Approve',
+                                                icon: HiCheckCircle,
+                                                color: 'bg-green-50 text-green-700 hover:bg-green-100 border border-green-200'
+                                            });
+                                            break;
+                                        case 'Approved':
+                                            actions.push({
+                                                action: 'confirm',
+                                                label: 'Confirm',
+                                                icon: HiCheckCircle,
+                                                color: 'bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200'
+                                            });
+                                            break;
+                                        case 'Confirmed':
+                                            actions.push({
+                                                action: 'complete',
+                                                label: 'Complete',
+                                                icon: HiCheckCircle,
+                                                color: 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200'
+                                            });
+                                            break;
+                                        case 'Canceled':
+                                            if (isFutureReservation) {
+                                                actions.push({
+                                                    action: 'reopen',
+                                                    label: 'Reopen',
+                                                    icon: HiPlay,
+                                                    color: 'bg-yellow-50 text-yellow-700 hover:bg-yellow-100 border border-yellow-200'
+                                                });
+                                            }
+                                            break;
+                                        default:
+                                            // No actions for Completed
+                                            break;
+                                    }
+
+                                    return (
+                                        <tr key={String(booking.id)} className="hover:bg-gray-50 transition-colors"> {/* Hover effect */}
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900 truncate max-w-0" title={booking.id}>
+                                                {String(booking.id).substring(0, 8)}...
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 truncate max-w-0" title={booking.userId}>
+                                                {String(booking.userId).substring(0, 8)}...
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                {booking.stationId}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-500 truncate max-w-0" title={booking.slotId}>
+                                                {String(booking.slotId).substring(0, 8)}...
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                {new Date(booking.reservationDateTime).toLocaleString()}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                                <StatusPill status={currentStatus} />
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-right">
+                                                <div className="flex items-center justify-end gap-2">
+                                                    {/* View Button */}
+                                                    <ActionButton
+                                                        action="view"
+                                                        label="View Details"
+                                                        icon={HiEye}
+                                                        onClick={() => handleView(booking)}
+                                                        className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200"
+                                                    />
+                                                    
+                                                    {/* Status Update Button (if applicable) */}
+                                                    {actions.length > 0 && (
+                                                        <ActionButton
+                                                            key={actions[0].action}
+                                                            action={actions[0].action}
+                                                            label={actions[0].label}
+                                                            icon={actions[0].icon}
+                                                            onClick={() => handleStatusUpdate(booking.id, actions[0].action)}
+                                                            className={actions[0].color}
+                                                        />
+                                                    )}
+
+                                                    {/* Cancel Button (if applicable) */}
+                                                    {['Pending', 'Approved'].includes(currentStatus) && (
+                                                        <ActionButton
+                                                            action="cancel"
+                                                            label="Cancel"
+                                                            icon={HiTrash}
+                                                            onClick={() => {
+                                                                setSelectedBookingId(booking.id);
+                                                                setShowCancelModal(true);
+                                                            }}
+                                                            disabled={!canCancel}
+                                                            title={canCancel ? 'Cancel Booking' : 'Cannot cancel less than 3 hours before reservation'}
+                                                            className={canCancel ? 'bg-red-50 text-red-700 hover:bg-red-100 border border-red-200' : 'bg-gray-100 text-gray-500 cursor-not-allowed'}
+                                                        />
+                                                    )}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })
                             )}
                         </tbody>
                     </table>
                 </div>
             </div>
+
+            {/* Details Modal */}
+            <BookingDetailsModal
+                isOpen={showDetailsModal}
+                onClose={() => setShowDetailsModal(false)}
+                booking={selectedBooking}
+            />
 
             {/* Cancel Modal */}
             <ConfirmCancelModal
