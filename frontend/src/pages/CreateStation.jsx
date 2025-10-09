@@ -29,7 +29,15 @@ const LocationPicker = ({ setForm }) => {
         .then((data) => {
           setForm((prev) => ({
             ...prev,
-            Location: data.display_name || `${lat},${lng}`,
+            Address: data.display_name || `${lat},${lng}`,
+            GeoLocation: { Latitude: lat, Longitude: lng },
+          }));
+        })
+        .catch(() => {
+          setForm((prev) => ({
+            ...prev,
+            Address: `${lat},${lng}`,
+            GeoLocation: { Latitude: lat, Longitude: lng },
           }));
         });
     },
@@ -42,15 +50,47 @@ const CreateStation = () => {
   const navigate = useNavigate();
   const [form, setForm] = useState({
     Name: "",
-    Location: "",
+    Address: "",
+    GeoLocation: { Latitude: null, Longitude: null },
     Type: "AC",
     Active: true,
+    NumberOfConnectors: 1,
+    ConnectorTypes: [],
+    OperatingHours: "",
+    PhoneNumber: "",
+    Email: "",
+    IsPublic: true,
+    Amenities: [],
   });
   const [loading, setLoading] = useState(false);
   const [popup, setPopup] = useState({ message: "", type: "success" });
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+
+    // handle nested GeoLocation numeric inputs
+    if (name === 'Latitude' || name === 'Longitude') {
+      const num = value === '' ? null : Number(value);
+      setForm((prev) => ({
+        ...prev,
+        GeoLocation: {
+          ...prev.GeoLocation,
+          [name === 'Latitude' ? 'Latitude' : 'Longitude']: num,
+        },
+      }));
+      return;
+    }
+
+    // comma-separated lists for connectors/amenities
+    if (name === 'ConnectorTypes' || name === 'Amenities') {
+      const arr = value
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+      setForm((prev) => ({ ...prev, [name]: arr }));
+      return;
+    }
+
     setForm((prev) => ({
       ...prev,
       [name]: type === "checkbox" ? checked : value,
@@ -116,18 +156,40 @@ const CreateStation = () => {
             />
           </div>
 
-          {/* Map + Location */}
+          {/* Map + Address + GeoLocation */}
           <div>
-            <label className="block text-sm font-medium mb-1">Location</label>
+            <label className="block text-sm font-medium mb-1">Address</label>
             <input
               type="text"
-              name="Location"
-              value={form.Location}
+              name="Address"
+              value={form.Address}
               onChange={handleChange}
               className="w-full border border-gray-300 rounded-md px-3 py-2 mb-2"
               placeholder="Search or click on the map"
               required
             />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-2">
+              <input
+                type="number"
+                step="any"
+                name="Latitude"
+                value={form.GeoLocation?.Latitude ?? ''}
+                onChange={handleChange}
+                className="w-full border border-gray-300 rounded-md px-3 py-2"
+                placeholder="Latitude"
+              />
+              <input
+                type="number"
+                step="any"
+                name="Longitude"
+                value={form.GeoLocation?.Longitude ?? ''}
+                onChange={handleChange}
+                className="w-full border border-gray-300 rounded-md px-3 py-2"
+                placeholder="Longitude"
+              />
+            </div>
+
             <MapContainer
               center={[6.9271, 79.8612]}
               zoom={12}
@@ -153,6 +215,86 @@ const CreateStation = () => {
               <option value="AC">AC</option>
               <option value="DC">DC</option>
             </select>
+          </div>
+
+          {/* Number of connectors & Connector types */}
+          <div>
+            <label className="block text-sm font-medium mb-1">Number of Connectors</label>
+            <input
+              type="number"
+              name="NumberOfConnectors"
+              min={1}
+              value={form.NumberOfConnectors}
+              onChange={(e) => setForm((p) => ({ ...p, NumberOfConnectors: Number(e.target.value) }))}
+              className="w-full border border-gray-300 rounded-md px-3 py-2"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Connector Types (comma separated)</label>
+            <input
+              type="text"
+              name="ConnectorTypes"
+              value={(form.ConnectorTypes || []).join(', ')}
+              onChange={handleChange}
+              className="w-full border border-gray-300 rounded-md px-3 py-2"
+              placeholder="Type2, CHAdeMO"
+            />
+          </div>
+
+          {/* Contact & meta fields */}
+          <div>
+            <label className="block text-sm font-medium mb-1">Operating Hours</label>
+            <input
+              type="text"
+              name="OperatingHours"
+              value={form.OperatingHours}
+              onChange={handleChange}
+              className="w-full border border-gray-300 rounded-md px-3 py-2"
+              placeholder="e.g. 08:00 - 22:00"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            <input
+              type="text"
+              name="PhoneNumber"
+              value={form.PhoneNumber}
+              onChange={handleChange}
+              className="w-full border border-gray-300 rounded-md px-3 py-2"
+              placeholder="Phone number"
+            />
+            <input
+              type="email"
+              name="Email"
+              value={form.Email}
+              onChange={handleChange}
+              className="w-full border border-gray-300 rounded-md px-3 py-2"
+              placeholder="Contact email"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Amenities (comma separated)</label>
+            <input
+              type="text"
+              name="Amenities"
+              value={(form.Amenities || []).join(', ')}
+              onChange={handleChange}
+              className="w-full border border-gray-300 rounded-md px-3 py-2"
+              placeholder="Restroom, Cafe, Parking"
+            />
+          </div>
+
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              name="IsPublic"
+              checked={form.IsPublic}
+              onChange={handleChange}
+              className="mr-2"
+            />
+            <label className="text-sm">Publicly Accessible</label>
           </div>
 
           {/* Active */}

@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ConfirmInitModal from "../components/common/ConfirmInitModal";
+import StationDetailsModal from "../components/common/StationDetailsModal";
 import { BoltIcon, MapPinIcon, BuildingOfficeIcon } from '@heroicons/react/24/outline'; // Assuming Heroicons for icons; install if needed: npm i @heroicons/react
 
 const ChargingStations = () => {
@@ -10,6 +11,9 @@ const ChargingStations = () => {
     const [loading, setLoading] = useState(true);
     const [err, setErr] = useState('');
     const [initStation, setInitStation] = useState(null);
+    const [modalStation, setModalStation] = useState(null);
+    const [showModal, setShowModal] = useState(false);
+    const [popup, setPopup] = useState({ message: '', type: 'success' });
 
     // Compute stats from stations data
     const totalStations = stations.length;
@@ -48,6 +52,11 @@ const ChargingStations = () => {
     const goDetails = (id) => navigate(`/dashboard/stations/${id}`);
     const goBook = (id) => navigate(`/dashboard/stations/${id}/book`);
 
+    const openDetailsModal = (stationId) => {
+        setModalStation(stationId);
+        setShowModal(true);
+    };
+
     if (loading) {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6 md:p-8 lg:p-10">
@@ -58,6 +67,11 @@ const ChargingStations = () => {
             </div>
         );
     }
+
+    const handleModalUpdated = (updatedStation) => {
+        setStations((prev) => prev.map((p) => (p.id === (updatedStation.id || updatedStation._id || updatedStation.Id) ? updatedStation : p)));
+        setPopup({ message: 'Station updated', type: 'success' });
+    };
 
     return (
         <div className="p-6 md:p-8 lg:p-10 bg-gray-50 min-h-screen"> {/* Matched UserManagementPage padding */}
@@ -156,16 +170,16 @@ const ChargingStations = () => {
                 <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3"> {/* Matched gap-6 for consistency */}
                     {stations.map((s) => (
                         <div
-                            key={s.id}
+                            key={s.id ?? s._id ?? s.Id}
                             className="bg-white rounded-3xl border border-gray-200 p-6 shadow-sm hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 hover:scale-[1.02]"
                         >
                             <div className="flex items-start justify-between gap-4 mb-4">
                                 <div className="flex-1 min-w-0">
                                     <h3 className="text-xl font-bold text-gray-900 truncate">{s.name}</h3>
-                                    <p className="text-sm text-gray-600 mt-1 flex items-center">
-                                        <MapPinIcon className="h-4 w-4 mr-1 text-gray-400" />
-                                        {s.location}
-                                    </p>
+                                            <p className="text-sm text-gray-600 mt-1 flex items-center">
+                                                <MapPinIcon className="h-4 w-4 mr-1 text-gray-400" />
+                                                {s.address || s.location || '—'}
+                                            </p>
                                 </div>
                                 <span
                                     className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${
@@ -185,9 +199,48 @@ const ChargingStations = () => {
                                     </div>
                                     <div>
                                         <p className="text-xs font-medium text-gray-500">Charger Type</p>
-                                        <p className="text-sm font-semibold text-gray-900">{s.type || '—'}</p>
+                                                                                <p className="text-sm font-semibold text-gray-900">{s.type || '—'}</p>
                                     </div>
                                 </div>
+
+                                                                {/* Connectors */}
+                                                                {(s.connectorTypes && s.connectorTypes.length > 0) && (
+                                                                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                                                                        <div className="p-2 bg-gray-100 rounded-lg">
+                                                                            <MapPinIcon className="h-5 w-5 text-gray-600" />
+                                                                        </div>
+                                                                        <div>
+                                                                            <p className="text-xs font-medium text-gray-500">Connectors</p>
+                                                                            <p className="text-sm font-semibold text-gray-900">{s.connectorTypes.join(', ')}</p>
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+
+                                                                {/* Contact */}
+                                                                {(s.phoneNumber || s.email) && (
+                                                                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                                                                        <div className="p-2 bg-gray-100 rounded-lg">
+                                                                            <svg className="h-5 w-5 text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 10v6a2 2 0 0 1-2 2H9l-4 2V6a2 2 0 0 1 2-2h11" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                                                        </div>
+                                                                        <div>
+                                                                            <p className="text-xs font-medium text-gray-500">Contact</p>
+                                                                            <p className="text-sm font-semibold text-gray-900">{s.phoneNumber || ''}{s.phoneNumber && s.email ? ' • ' : ''}{s.email || ''}</p>
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+
+                                                                {/* Amenities */}
+                                                                {(s.amenities && s.amenities.length > 0) && (
+                                                                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                                                                        <div className="p-2 bg-gray-100 rounded-lg">
+                                                                            <svg className="h-5 w-5 text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 7h18M3 12h18M3 17h18" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                                                        </div>
+                                                                        <div>
+                                                                            <p className="text-xs font-medium text-gray-500">Amenities</p>
+                                                                            <p className="text-sm font-semibold text-gray-900">{s.amenities.join(', ')}</p>
+                                                                        </div>
+                                                                    </div>
+                                                                )}
 
                                 {/* Add more stats if available in the model, e.g., capacity or slots */}
                                 {/* Example: <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">...</div> */}
@@ -196,24 +249,26 @@ const ChargingStations = () => {
                             <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-gray-100">
                                 <button
                                     type="button"
-                                    onClick={() => goBook(s.id)}
-                                    className="flex-1 px-4 py-3 rounded-xl bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition-all duration-200 shadow-sm hover:shadow-md transform hover:-translate-y-0.5 text-center"
+                                    onClick={() => goBook(s.id ?? s._id ?? s.Id)}
+                                    disabled={!s.active}
+                                    className={`flex-1 px-4 py-3 rounded-xl font-medium transition-all duration-200 shadow-sm transform text-center ${s.active ? 'bg-indigo-600 text-white hover:bg-indigo-700 hover:shadow-md' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`}
                                 >
-                                    Book Slot
+                                    {s.active ? 'Book Slot' : 'Unavailable'}
                                 </button>
                                 <button
                                     type="button"
-                                    onClick={() => goDetails(s.id)}
+                                    onClick={() => openDetailsModal(s.id ?? s._id ?? s.Id)}
                                     className="px-4 py-3 rounded-xl border-2 border-gray-300 text-gray-700 font-medium hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 shadow-sm hover:shadow-md transform hover:-translate-y-0.5"
                                 >
                                     Details
                                 </button>
                                 <button
                                     type="button"
-                                    onClick={() => setInitStation(s.id)}
-                                    className="px-4 py-3 rounded-xl bg-yellow-500 text-white font-medium hover:bg-yellow-600 transition-all duration-200 shadow-sm hover:shadow-md transform hover:-translate-y-0.5"
+                                    onClick={() => setInitStation(s.id ?? s._id ?? s.Id)}
+                                    disabled={!s.active}
+                                    className={`px-4 py-3 rounded-xl font-medium transition-all duration-200 shadow-sm transform ${s.active ? 'bg-yellow-500 text-white hover:bg-yellow-600 hover:shadow-md' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`}
                                 >
-                                    Initialize
+                                    {s.active ? 'Initialize' : 'Disabled'}
                                 </button>
                             </div>
                         </div>
@@ -226,6 +281,20 @@ const ChargingStations = () => {
                     stationId={initStation}
                     onClose={() => setInitStation(null)}
                 />
+            )}
+
+            {showModal && (
+                <StationDetailsModal
+                    stationId={modalStation}
+                    open={showModal}
+                    onClose={() => setShowModal(false)}
+                    onUpdated={handleModalUpdated}
+                />
+            )}
+
+            {/* popup */}
+            {popup.message && (
+                <div className={`fixed bottom-6 right-6 p-3 rounded-lg ${popup.type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>{popup.message}</div>
             )}
         </div>
     );

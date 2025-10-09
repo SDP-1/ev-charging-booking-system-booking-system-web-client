@@ -12,6 +12,7 @@ import AllBookings from './pages/AllBookings';
 import ChargingStations from './pages/ChargingStations';
 import CreateStation from './pages/CreateStation';
 import StationSlots from './pages/StationSlots';
+import StationDetails from './pages/StationDetails';
 
 // ----------------------------------------------------------------------
 // Protected Route Component
@@ -71,6 +72,10 @@ function App() {
                         <StationSlots />
                     </ProtectedRoute>
                 }
+            />
+            <Route
+                path="/dashboard/stations/:stationId"
+                element={<ProtectedRoute allowedRoles={["Backoffice", "StationOperator", "EVOwner"]}><StationDetails /></ProtectedRoute>}
             />
 
             <Route
