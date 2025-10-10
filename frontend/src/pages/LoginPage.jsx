@@ -1,21 +1,22 @@
-// src/pages/LoginPage.jsx
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import Input from '../components/common/Input'; // Reusing the Input component
+import { UserIcon, LockClosedIcon, ArrowRightIcon } from '@heroicons/react/24/outline';
+import { motion } from 'framer-motion';
 import { useLogin } from '../hooks/useLogin';
 import { useAuth } from '../context/AuthContext';
 
 const LoginPage = () => {
   const navigate = useNavigate();
   const { handleSubmit, formData, handleChange, loading, error } = useLogin();
-  const { user } = useAuth(); // Check if user is already logged in
+  const { user } = useAuth();
+  const [isHovered, setIsHovered] = useState(false);
 
-  // Redirect safely when user becomes available
   useEffect(() => {
     if (user) navigate('/dashboard', { replace: true });
   }, [user, navigate]);
 
   const handleFormSubmission = async (e) => {
+    e.preventDefault();
     const success = await handleSubmit(e);
     if (success) {
       navigate('/dashboard');
@@ -23,94 +24,125 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="flex min-h-screen">
-      {/* Left Side: Indigo Banner (5/12) */}
-      <div className="w-5/12 bg-indigo-800 text-white p-12 flex flex-col justify-center">
-        <h1 className="text-4xl font-bold mb-4">Efficient EV Management</h1>
-        <p className="text-sm leading-relaxed">
-          Access your personalized dashboard to book charging slots, monitor stations, or manage backoffice tasks.
-        </p>
-      </div>
+    <div
+      className="min-h-screen flex items-center justify-center bg-cover bg-center relative"
+      style={{
+        backgroundImage: `url('https://gmdirecthire.co.uk/_next/image?url=https%3A%2F%2Fgm-blogs.s3.eu-west-1.amazonaws.com%2FEV_charging_points_near_me_aa2dfdf69f.webp&w=2048&q=100')`,
+      }}
+    >
+      {/* Overlay for better contrast */}
+      <div className="absolute inset-0 bg-black bg-opacity-40" />
 
-      {/* Right Side: Login Form (7/12) */}
-      <div className="w-7/12 flex flex-col justify-center relative overflow-hidden bg-gray-50">
-        <div className="ml-auto w-8/12 px-6">
-          <h2 className="text-2xl font-bold mb-1">Welcome Back!</h2>
-          <p className="text-sm text-gray-600 mb-6">Please sign in to your account</p>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: 'easeOut' }}
+        className="relative bg-white bg-opacity-95 rounded-3xl shadow-2xl p-8 w-full max-w-lg mx-4"
+      >
+        <div className="text-center mb-6">
+          <h2 className="text-3xl font-bold text-green-600">Welcome Back</h2>
+          <p className="text-sm text-gray-600 mt-2">
+            Access your personalized dashboard to book charging slots, monitor stations, or manage backoffice tasks.
+          </p>
+        </div>
 
-          {/* Error Display */}
-          {error && (
-            <div
-              className="mb-4 p-3 text-sm text-red-700 bg-red-100 border border-red-200 rounded-md"
-              role="alert"
-            >
-              {error}
+        {error && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="mb-6 p-3 text-sm text-red-700 bg-red-100 border border-red-200 rounded-lg"
+            role="alert"
+          >
+            {error}
+          </motion.div>
+        )}
+
+        <form onSubmit={handleFormSubmission} noValidate className="space-y-5">
+          <div>
+            <label htmlFor="username" className="block text-sm font-medium text-gray-700">
+              Username
+            </label>
+            <div className="relative mt-1">
+              <UserIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <input
+                id="username"
+                name="username"
+                type="text"
+                autoComplete="username"
+                value={formData.username || ''}
+                onChange={handleChange}
+                required
+                className="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm transition-all duration-200"
+                placeholder="Enter your username"
+              />
             </div>
-          )}
+          </div>
 
-          {/* noValidate disables HTML5 email pattern checks */}
-          <form onSubmit={handleFormSubmission} noValidate>
-            {/* Username */}
-            <Input
-              label="Username"
-              id="username"
-              name="username"
-              type="text"                 // <-- was "email"
-              autoComplete="username"
-              value={formData.username || ''}
-              onChange={handleChange}
-              required
-            />
-
-            {/* Password */}
-            <Input
-              label="Password"
-              id="password"
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              value={formData.password || ''}
-              onChange={handleChange}
-              required
-            />
-
-            <div className="flex justify-between items-center mb-6">
-              <div className="flex items-center">
-                <input type="checkbox" id="remember" className="mr-2 accent-indigo-500" />
-                <label htmlFor="remember" className="text-sm text-gray-600">
-                  Remember me
-                </label>
-              </div>
-              <Link
-                to="/forgot-password"
-                className="text-sm text-indigo-500 hover:text-indigo-600 transition-colors"
-              >
-                Forgot your password?
-              </Link>
+          <div>
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+              Password
+            </label>
+            <div className="relative mt-1">
+              <LockClosedIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <input
+                id="password"
+                name="password"
+                type="password"
+                autoComplete="current-password"
+                value={formData.password || ''}
+                onChange={handleChange}
+                required
+                className="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm transition-all duration-200"
+                placeholder="Enter your password"
+              />
             </div>
+          </div>
 
-            {/* Sign In Button */}
-            <button
-              type="submit"
-              className="w-full bg-indigo-500 hover:bg-indigo-600 text-white py-3 rounded-md transition-colors mb-6 disabled:bg-indigo-300"
-              disabled={loading}
+          <div className="flex justify-between items-center">
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="remember"
+                className="h-4 w-4 text-green-600 border-gray-300 rounded focus:ring-green-500 transition-colors"
+              />
+              <label htmlFor="remember" className="ml-2 text-sm text-gray-600">
+                Remember me
+              </label>
+            </div>
+            <Link
+              to="/forgot-password"
+              className="text-sm text-blue-600 hover:text-blue-700 transition-colors"
             >
-              {loading ? 'Signing In...' : 'Sign In'}
-            </button>
-          </form>
+              Forgot password?
+            </Link>
+          </div>
 
-          {/* Navigation Link to Register */}
-          <div className="text-center">
-            <p className="text-sm text-gray-600">Don't have an account?</p>
+          <motion.button
+            type="submit"
+            onHoverStart={() => setIsHovered(true)}
+            onHoverEnd={() => setIsHovered(false)}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            className="w-full bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-lg transition-colors text-sm font-medium flex items-center justify-center gap-2 disabled:bg-green-400"
+            disabled={loading}
+          >
+            {loading ? 'Signing In...' : 'Sign In'}
+            {!loading && <ArrowRightIcon className="h-4 w-4" />}
+          </motion.button>
+        </form>
+
+        <div className="mt-6 text-center">
+          <p className="text-sm text-gray-600">
+            Don't have an account?{' '}
             <Link
               to="/register"
-              className="text-indigo-500 hover:text-indigo-600 transition-colors text-sm font-medium"
+              className="text-blue-600 hover:text-blue-700 transition-colors font-medium"
             >
               Sign up
             </Link>
-          </div>
+          </p>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 };

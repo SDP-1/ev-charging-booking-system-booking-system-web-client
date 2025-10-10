@@ -1,12 +1,15 @@
+
 import React from 'react';
+import { motion } from 'framer-motion';
 import { HiPencil, HiUserAdd, HiUserRemove } from 'react-icons/hi';
 
 const UserTable = ({ users, loading, onEdit, onToggleActive }) => {
   const renderStatus = (active) => (
     <span
       className={`inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full ${
-        active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+        active ? 'bg-green-100 text-green-800 ring-1 ring-inset ring-green-600/20' : 'bg-red-100 text-red-800 ring-1 ring-inset ring-red-500/10'
       }`}
+      aria-label={`User status: ${active ? 'Active' : 'Pending/Inactive'}`}
     >
       {active ? 'Active' : 'Pending/Inactive'}
     </span>
@@ -14,28 +17,41 @@ const UserTable = ({ users, loading, onEdit, onToggleActive }) => {
 
   if (loading) {
     return (
-      <div className="p-6 text-center text-gray-500 flex items-center justify-center">
-        <svg className="animate-spin h-5 w-5 mr-2 text-indigo-600" viewBox="0 0 24 24">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="p-6 text-center text-gray-500 flex items-center justify-center"
+      >
+        <svg className="animate-spin h-5 w-5 mr-2 text-green-600" viewBox="0 0 24 24">
           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
         </svg>
         Loading user data...
-      </div>
+      </motion.div>
     );
   }
 
   if (!users || users.length === 0) {
     return (
-      <div className="p-6 text-center text-gray-500">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="p-6 text-center text-gray-500"
+      >
         No users found matching the filter criteria.
-      </div>
+      </motion.div>
     );
   }
 
   return (
-    <div className="overflow-x-auto shadow-lg rounded-xl bg-white">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="overflow-x-auto shadow-md rounded-xl bg-white"
+    >
       <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-100">
+        <thead className="bg-green-50">
           <tr>
             <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Username</th>
             <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Role</th>
@@ -46,10 +62,13 @@ const UserTable = ({ users, loading, onEdit, onToggleActive }) => {
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-200">
-          {users.map((user) => (
-            <tr
+          {users.map((user, index) => (
+            <motion.tr
               key={user.id}
-              className="hover:bg-indigo-50 transition duration-200"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: index * 0.05 }}
+              className="hover:bg-green-50 transition duration-200"
               role="row"
               aria-label={`User ${user.username}`}
             >
@@ -61,15 +80,19 @@ const UserTable = ({ users, loading, onEdit, onToggleActive }) => {
                 {user.message || 'N/A'}
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
-                <button
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                   onClick={() => onEdit(user)}
-                  className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-100 hover:text-indigo-800 transition duration-200"
+                  className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-green-600 border border-green-200 rounded-lg hover:bg-green-100 hover:text-green-800 transition duration-200"
                   aria-label={`Edit user ${user.username}`}
                 >
                   <HiPencil className="w-4 h-4 mr-1.5" />
                   Edit
-                </button>
-                <button
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                   onClick={() => onToggleActive(user.id, user.active)}
                   className={`inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-lg border transition duration-200 ${
                     user.active
@@ -84,13 +107,13 @@ const UserTable = ({ users, loading, onEdit, onToggleActive }) => {
                     <HiUserAdd className="w-4 h-4 mr-1.5" />
                   )}
                   {user.active ? 'Deactivate' : 'Activate'}
-                </button>
+                </motion.button>
               </td>
-            </tr>
+            </motion.tr>
           ))}
         </tbody>
       </table>
-    </div>
+    </motion.div>
   );
 };
 

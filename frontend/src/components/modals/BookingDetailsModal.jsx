@@ -1,5 +1,7 @@
-// src/components/modals/BookingDetailsModal.jsx
+
+
 import React from 'react';
+import { motion } from 'framer-motion';
 import { HiClock, HiCheckCircle, HiXCircle } from 'react-icons/hi';
 import StatusPill from '../common/StatusPill';
 
@@ -66,17 +68,17 @@ const BookingDetailsModal = ({ isOpen, onClose, booking }) => {
     
     if (stepKey === currentStatus) {
       return {
-        iconColor: `${stepKey.toLowerCase()}-600`,
-        bgColor: `${stepKey.toLowerCase()}-100`,
-        ringColor: `${stepKey.toLowerCase()}-300`,
+        iconColor: `text-${stepKey.toLowerCase()}-600`,
+        bgColor: `bg-${stepKey.toLowerCase()}-100`,
+        ringColor: `ring-${stepKey.toLowerCase()}-300`,
         textColor: 'text-gray-700 font-semibold',
-        lineColor: `${stepKey.toLowerCase()}-300`
+        lineColor: `bg-${stepKey.toLowerCase()}-300`
       };
     } else if (stepIndex < currentIndex && currentStatus !== 'Canceled') {
       return {
-        iconColor: 'text-green-500',
+        iconColor: 'text-green-600',
         bgColor: 'bg-green-100',
-        ringColor: 'green-300',
+        ringColor: 'ring-green-300',
         textColor: 'text-gray-600',
         lineColor: 'bg-green-300'
       };
@@ -84,7 +86,7 @@ const BookingDetailsModal = ({ isOpen, onClose, booking }) => {
       return {
         iconColor: 'text-gray-400',
         bgColor: 'bg-gray-100',
-        ringColor: 'gray-200',
+        ringColor: 'ring-gray-200',
         textColor: 'text-gray-500',
         lineColor: 'bg-gray-200'
       };
@@ -99,30 +101,38 @@ const BookingDetailsModal = ({ isOpen, onClose, booking }) => {
   const canReopen = currentStatus === 'Canceled' && isFutureReservation;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      transition={{ duration: 0.3 }}
+      className="fixed inset-0 z-50 overflow-y-auto"
+    >
       <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
         <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onClick={onClose}></div>
-        <div className="relative transform overflow-hidden rounded-2xl bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-3xl max-h-[95vh] overflow-y-auto">
+        <div className="relative transform overflow-hidden rounded-xl bg-white text-left shadow-md transition-all sm:my-8 sm:w-full sm:max-w-3xl max-h-[95vh] overflow-y-auto border-t-4 border-green-500">
           {/* Header */}
-          <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4 text-white">
+          <div className="bg-gradient-to-r from-green-600 to-green-800 px-6 py-4 text-white">
             <div className="flex items-center justify-between">
               <h3 className="text-xl font-bold">Booking Details</h3>
-              <button
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
                 onClick={onClose}
                 className="p-2 rounded-full bg-white/20 hover:bg-white/30 transition-colors"
-                aria-label="Close modal"
+                aria-label="Close booking details modal"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
-              </button>
+              </motion.button>
             </div>
           </div>
 
           {/* Enhanced Status Timeline */}
           <div className="p-6 border-b border-gray-200 bg-gradient-to-b from-white to-gray-50">
             <h4 className="text-sm font-semibold text-gray-700 mb-6 flex items-center">
-              <HiCheckCircle className="h-5 w-5 text-indigo-500 mr-2" />
+              <HiCheckCircle className="h-5 w-5 text-green-600 mr-2" />
               Booking Journey
             </h4>
             <div className="relative">
@@ -134,11 +144,17 @@ const BookingDetailsModal = ({ isOpen, onClose, booking }) => {
                   const isCompleted = statusSteps.findIndex(s => s.key === currentStatus) > index && currentStatus !== 'Canceled';
 
                   return (
-                    <div key={step.key} className="flex flex-col items-center relative flex-1">
+                    <motion.div
+                      key={step.key}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3, delay: index * 0.1 }}
+                      className="flex flex-col items-center relative flex-1"
+                    >
                       {/* Step Circle */}
-                      <div className={`relative p-3 rounded-full ring-2 ring-inset ${style.ringColor} bg-${style.bgColor} transition-all duration-300 ${isCurrent ? 'scale-110 shadow-lg' : ''}`}>
+                      <div className={`relative p-3 rounded-full ring-2 ring-inset ${style.ringColor} ${style.bgColor} transition-all duration-300 ${isCurrent ? 'scale-110 shadow-lg' : ''}`}>
                         {isCompleted ? (
-                          <HiCheckCircle className="h-5 w-5 text-green-500 absolute inset-0 m-auto" />
+                          <HiCheckCircle className="h-5 w-5 text-green-600 absolute inset-0 m-auto" />
                         ) : (
                           <step.icon className={`h-5 w-5 ${style.iconColor}`} />
                         )}
@@ -158,7 +174,7 @@ const BookingDetailsModal = ({ isOpen, onClose, booking }) => {
                       {index < statusSteps.length - 1 && (
                         <div className={`absolute top-12 left-1/2 transform -translate-x-1/2 w-full h-0.5 ${style.lineColor} z-0 transition-colors duration-300`} />
                       )}
-                    </div>
+                    </motion.div>
                   );
                 })}
               </div>
@@ -183,29 +199,39 @@ const BookingDetailsModal = ({ isOpen, onClose, booking }) => {
           {/* Details Grid */}
           <div className="p-6 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
+              <motion.div
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.3 }}
+                className="space-y-4"
+              >
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">Booking ID</label>
-                  <p className="text-lg font-mono text-gray-900 bg-gray-50 p-3 rounded-xl border border-gray-200">{booking.id}</p>
+                  <p className="text-lg font-mono text-gray-900 bg-gray-50 p-3 rounded-xl border border-green-200" aria-label="Booking ID">{booking.id}</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">EV Owner ID</label>
-                  <p className="text-sm text-gray-900 bg-gray-50 p-3 rounded-xl border border-gray-200">{booking.userId}</p>
+                  <p className="text-sm text-gray-900 bg-gray-50 p-3 rounded-xl border border-green-200" aria-label="EV Owner ID">{booking.userId}</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">Station ID</label>
-                  <p className="text-sm text-gray-900 bg-gray-50 p-3 rounded-xl border border-gray-200">{booking.stationId}</p>
+                  <p className="text-sm text-gray-900 bg-gray-50 p-3 rounded-xl border border-green-200" aria-label="Station ID">{booking.stationId}</p>
                 </div>
-              </div>
-              <div className="space-y-4">
+              </motion.div>
+              <motion.div
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.3 }}
+                className="space-y-4"
+              >
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">Slot ID</label>
-                  <p className="text-lg font-mono text-gray-900 bg-gray-50 p-3 rounded-xl border border-gray-200">{booking.slotId}</p>
+                  <p className="text-lg font-mono text-gray-900 bg-gray-50 p-3 rounded-xl border border-green-200" aria-label="Slot ID">{booking.slotId}</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">Reservation Date & Time</label>
-                  <div className="bg-gray-50 p-3 rounded-xl border border-gray-200">
-                    <p className="text-sm text-gray-900 mb-1">{new Date(booking.reservationDateTime).toLocaleString()}</p>
+                  <div className="bg-gray-50 p-3 rounded-xl border border-green-200">
+                    <p className="text-sm text-gray-900 mb-1" aria-label="Reservation Date and Time">{new Date(booking.reservationDateTime).toLocaleString()}</p>
                     <div className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${
                       hoursUntilReservation >= 3 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                     }`}>
@@ -215,25 +241,34 @@ const BookingDetailsModal = ({ isOpen, onClose, booking }) => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">Created At</label>
-                  <p className="text-sm text-gray-900 bg-gray-50 p-3 rounded-xl border border-gray-200">
+                  <p className="text-sm text-gray-900 bg-gray-50 p-3 rounded-xl border border-green-200" aria-label="Created At">
                     {new Date(booking.createdAt).toLocaleString()}
                   </p>
                 </div>
-              </div>
+              </motion.div>
             </div>
 
             {/* Additional Details */}
             {booking.operatorUsername && (
-              <div>
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+              >
                 <label className="block text-sm font-medium text-gray-500 mb-2">Operator Username</label>
-                <p className="text-sm text-gray-900 bg-gray-50 p-3 rounded-xl border border-gray-200">{booking.operatorUsername}</p>
-              </div>
+                <p className="text-sm text-gray-900 bg-gray-50 p-3 rounded-xl border border-green-200" aria-label="Operator Username">{booking.operatorUsername}</p>
+              </motion.div>
             )}
 
-            {/* Action Eligibility - Enhanced with tooltips and better layout */}
-            <div className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-xl p-4 border border-gray-200">
+            {/* Action Eligibility */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+              className="bg-gradient-to-r from-gray-50 to-green-50 rounded-xl p-4 border border-green-200"
+            >
               <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center">
-                <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="h-4 w-4 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
                 Action Availability
@@ -253,37 +288,46 @@ const BookingDetailsModal = ({ isOpen, onClose, booking }) => {
                     condition: canReopen, 
                     reason: 'Available for Canceled future reservations only' 
                   }
-                ].map(({ label, condition, reason }) => (
-                  <div key={label} className="flex justify-between items-center py-2 px-3 bg-white rounded-lg border border-gray-100">
+                ].map(({ label, condition, reason }, index) => (
+                  <motion.div
+                    key={label}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.3, delay: index * 0.05 }}
+                    className="flex justify-between items-center py-2 px-3 bg-white rounded-lg border border-green-100"
+                  >
                     <div className="flex-1">
                       <span className="text-sm font-medium text-gray-900">{label}</span>
                       <p className="text-xs text-gray-500 mt-0.5">{reason}</p>
                     </div>
                     <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
                       condition 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-gray-100 text-gray-500'
+                        ? 'bg-green-100 text-green-800 ring-1 ring-inset ring-green-600/20' 
+                        : 'bg-gray-100 text-gray-500 ring-1 ring-inset ring-gray-200/20'
                     }`}>
                       {condition ? '✅ Available' : '❌ Unavailable'}
                     </span>
-                  </div>
+                  </motion.div>
                 ))}
               </div>
-            </div>
+            </motion.div>
 
-            {/* Actions in Modal (if needed, e.g., for backoffice) */}
+            {/* Actions */}
             <div className="flex justify-end space-x-3 pt-4 border-t border-gray-100 bg-gray-50 px-6 pb-6">
-              <button
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={onClose}
-                className="px-6 py-3 rounded-xl border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 hover:border-gray-400 transition-all duration-200"
+                className="px-6 py-3 rounded-xl border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 shadow-sm"
+                aria-label="Close booking details"
               >
                 Close
-              </button>
+              </motion.button>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 

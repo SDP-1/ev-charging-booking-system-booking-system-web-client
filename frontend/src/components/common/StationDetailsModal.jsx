@@ -1,5 +1,7 @@
+
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { XMarkIcon, PencilIcon, CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
@@ -42,6 +44,9 @@ const StationDetailsModal = ({
   const [error, setError] = useState('');
   const [initStation, setInitStation] = useState(null);
   const [popup, setPopup] = useState({ message: '', type: 'success' });
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteDeps, setDeleteDeps] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   const BASE = import.meta.env.VITE_API_BASE_URL;
   const token = localStorage.getItem('token');
@@ -153,7 +158,6 @@ const StationDetailsModal = ({
 
       // Build partial update DTO according to ChargingStationUpdateDto
       const updatedFields = {
-        // include string values (can be null/empty if intentionally cleared)
         name: form.name,
         address: form.address,
         type: form.type,
@@ -167,7 +171,6 @@ const StationDetailsModal = ({
         amenities: form.amenities,
       };
 
-      // Only include geoLocation if there's at least one coordinate
       if ((form.latitude !== undefined && form.latitude !== '') || (form.longitude !== undefined && form.longitude !== '')) {
         updatedFields.geoLocation = {
           latitude: form.latitude === '' || form.latitude === null ? null : Number(form.latitude),
@@ -188,8 +191,6 @@ const StationDetailsModal = ({
         const errBody = await res.text();
         throw new Error(`Update failed (${res.status}) ${errBody}`);
       }
-
-      const respJson = await res.json();
 
       setEditing(false);
       setPopup({ message: 'Station updated successfully', type: 'success' });
@@ -226,10 +227,6 @@ const StationDetailsModal = ({
   };
 
   // Delete flow: preview dependencies, then confirm delete
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [deleteDeps, setDeleteDeps] = useState(null);
-  const [deleting, setDeleting] = useState(false);
-
   const handleDelete = async (confirm = false) => {
     if (!currentId) return;
     try {
@@ -244,7 +241,6 @@ const StationDetailsModal = ({
         },
       });
 
-      // Try to parse json body if any
       let data = null;
       try {
         data = await res.json();
@@ -256,12 +252,10 @@ const StationDetailsModal = ({
         setPopup({ message: data?.message ?? 'Station deleted successfully', type: 'success' });
         setShowDeleteConfirm(false);
         onUpdated?.();
-        // Close modal after short delay so user sees popup
         setTimeout(() => onClose?.(), 700);
         return;
       }
 
-      // If backend signals dependencies (preview) use that to show confirm modal
       if (res.status === 409 || (data && (data.dependencies || data.Dependencies || data.BookingsCount || data.SlotsCount))) {
         const deps = data?.Dependencies ?? data?.dependencies ?? data ?? null;
         setDeleteDeps(deps);
@@ -269,7 +263,6 @@ const StationDetailsModal = ({
         return;
       }
 
-      // Otherwise show error
       setPopup({ message: (data && (data.message || data.Message)) || `Delete failed (${res.status})`, type: 'error' });
     } catch (err) {
       setPopup({ message: err.message, type: 'error' });
@@ -288,63 +281,97 @@ const StationDetailsModal = ({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 transition-opacity duration-300">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      transition={{ duration: 0.3 }}
+      className="fixed inset-0 bg-black/60 flex items-center justify-center z-50"
+    >
+      <div className="bg-white rounded-xl shadow-md w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden border border-green-200">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b bg-gradient-to-r from-indigo-50 to-blue-50">
+        <div className="flex items-center justify-between p-6 border-b bg-green-50">
           <h2 className="text-2xl font-bold text-gray-900">{station?.name ?? 'Charging Station'}</h2>
-          <button onClick={onClose} className="p-2 rounded-full hover:bg-gray-200 transition-colors">
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={onClose}
+            className="p-2 rounded-full hover:bg-green-200 transition-colors"
+            aria-label="Close station details modal"
+          >
             <XMarkIcon className="h-6 w-6 text-gray-600" />
-          </button>
+          </motion.button>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-thin scrollbar-thumb-green-600 scrollbar-track-gray-100">
           {/* Loading State */}
           {loading && !station && (
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="text-center"
+            >
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto"></div>
               <p className="mt-2 text-gray-600">Loading station details...</p>
-            </div>
+            </motion.div>
           )}
 
           {/* Error State */}
           {error && (
-            <div className="p-4 bg-red-50 text-red-700 rounded-lg flex items-center">
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="p-4 bg-red-50 text-red-700 rounded-lg border border-red-200 flex items-center"
+            >
               <XCircleIcon className="h-5 w-5 mr-2" />
               {error}
-            </div>
+            </motion.div>
           )}
 
           {/* Station Content */}
           {station && (
             <>
               {/* Status and Actions */}
-              <div className="flex items-center justify-between">
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+                className="flex items-center justify-between"
+              >
                 <span
-                  className={`px-4 py-1 rounded-full text-sm font-medium ${
-                    station.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                  className={`px-4 py-1 rounded-full text-sm font-medium ring-1 ring-inset ${
+                    station.active
+                      ? 'bg-green-100 text-green-800 ring-green-600/20'
+                      : 'bg-red-100 text-red-800 ring-red-600/20'
                   }`}
+                  aria-label={`Station status: ${station.active ? 'Active' : 'Inactive'}`}
                 >
                   {station.active ? 'Active' : 'Inactive'}
                 </span>
                 <div className="flex items-center gap-3">
                   {!editing && (
-                    <button
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
                       onClick={() => setEditing(true)}
-                      className="flex items-center gap-2 px-4 py-2 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors"
+                      className="flex items-center gap-2 px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors shadow-sm"
+                      aria-label="Edit station details"
                     >
                       <PencilIcon className="h-5 w-5" />
                       Edit
-                    </button>
+                    </motion.button>
                   )}
-                  <button
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                     onClick={() => handleStatus(station.active ? 'deactivate' : 'activate')}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors shadow-sm ${
                       station.active
                         ? 'bg-red-100 text-red-700 hover:bg-red-200'
                         : 'bg-green-100 text-green-700 hover:bg-green-200'
                     }`}
+                    aria-label={station.active ? 'Deactivate station' : 'Activate station'}
                   >
                     {station.active ? (
                       <>
@@ -357,20 +384,28 @@ const StationDetailsModal = ({
                         Activate
                       </>
                     )}
-                  </button>
-                  <button
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                     onClick={() => handleDelete(false)}
-                    className="flex items-center gap-2 px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
+                    className="flex items-center gap-2 px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors shadow-sm"
                     disabled={deleting}
+                    aria-label="Delete station"
                   >
                     Delete
-                  </button>
+                  </motion.button>
                 </div>
-              </div>
+              </motion.div>
 
               {/* Map */}
               {lat && lon && (
-                <div className="h-80 rounded-xl overflow-hidden shadow-lg">
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="h-80 rounded-xl overflow-hidden shadow-md border border-green-200"
+                >
                   <MapContainer center={[lat, lon]} zoom={15} style={{ height: '100%', width: '100%' }}>
                     <TileLayer
                       attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -382,135 +417,177 @@ const StationDetailsModal = ({
                     {editing && <MapClickHandler onLocationSelect={handleLocationSelect} />}
                   </MapContainer>
                   {editing && (
-                    <p className="mt-2 text-sm text-gray-600 text-center">
+                    <p className="mt-2 text-sm text-green-600 text-center">
                       Click on the map to update location
                     </p>
                   )}
-                </div>
+                </motion.div>
               )}
 
               {/* Station Details */}
-              <div className="space-y-4">
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+                className="space-y-4"
+              >
                 <div>
                   <h3 className="text-sm font-medium text-gray-500">Address</h3>
-                  <p className="mt-1 text-gray-900">{station.address ?? '—'}</p>
+                  <p className="mt-1 text-gray-900" aria-label="Station address">{station.address ?? '—'}</p>
                 </div>
                 <div>
                   <h3 className="text-sm font-medium text-gray-500">Type</h3>
-                  <p className="mt-1 text-gray-900">{station.type ?? '—'}</p>
+                  <p className="mt-1 text-gray-900" aria-label="Station type">{station.type ?? '—'}</p>
                 </div>
                 <div>
                   <h3 className="text-sm font-medium text-gray-500">Contact</h3>
-                  <p className="mt-1 text-gray-900">
+                  <p className="mt-1 text-gray-900" aria-label="Station contact">
                     {station.phoneNumber} {station.phoneNumber && station.email && '•'} {station.email}
                   </p>
                 </div>
                 <div>
                   <h3 className="text-sm font-medium text-gray-500">Operating Hours</h3>
-                  <p className="mt-1 text-gray-900">{station.operatingHours ?? '—'}</p>
+                  <p className="mt-1 text-gray-900" aria-label="Operating hours">{station.operatingHours ?? '—'}</p>
                 </div>
                 <div>
                   <h3 className="text-sm font-medium text-gray-500">Connectors</h3>
-                  <p className="mt-1 text-gray-900">
+                  <p className="mt-1 text-gray-900" aria-label="Connectors">
                     {station.numberOfConnectors} ({station.connectorTypes?.join(', ') ?? '—'})
                   </p>
                 </div>
                 <div>
                   <h3 className="text-sm font-medium text-gray-500">Amenities</h3>
-                  <p className="mt-1 text-gray-900">{station.amenities?.join(', ') ?? '—'}</p>
+                  <p className="mt-1 text-gray-900" aria-label="Amenities">{station.amenities?.join(', ') ?? '—'}</p>
                 </div>
-              </div>
+              </motion.div>
 
               {/* Edit Form */}
               {editing && (
-                <div className="mt-6 p-6 bg-gray-50 rounded-xl space-y-4">
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="mt-6 p-6 bg-green-50 rounded-xl space-y-4 border border-green-200"
+                >
                   <h3 className="text-lg font-semibold text-gray-900">Edit Station</h3>
                   <div className="grid gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Name</label>
+                      <label className="block text-sm font-medium text-gray-700" htmlFor="name">Name</label>
                       <input
+                        id="name"
                         name="name"
                         value={form.name}
                         onChange={handleChange}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                        className="mt-1 block w-full rounded-lg border-gray-200 shadow-sm focus:border-green-500 focus:ring-green-500 transition duration-200"
+                        aria-label="Station name"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Address</label>
+                      <label className="block text-sm font-medium text-gray-700" htmlFor="address">Address</label>
                       <input
+                        id="address"
                         name="address"
                         value={form.address}
                         onChange={handleChange}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                        className="mt-1 block w-full rounded-lg border-gray-200 shadow-sm focus:border-green-500 focus:ring-green-500 transition duration-200"
+                        aria-label="Station address"
                       />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700">Latitude</label>
+                        <label className="block text-sm font-medium text-gray-700" htmlFor="latitude">Latitude</label>
                         <input
+                          id="latitude"
                           name="latitude"
                           value={form.latitude}
                           onChange={handleChange}
-                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                          className="mt-1 block w-full rounded-lg border-gray-200 shadow-sm focus:border-green-500 focus:ring-green-500 transition duration-200"
+                          aria-label="Station latitude"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700">Longitude</label>
+                        <label className="block text-sm font-medium text-gray-700" htmlFor="longitude">Longitude</label>
                         <input
+                          id="longitude"
                           name="longitude"
                           value={form.longitude}
                           onChange={handleChange}
-                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                          className="mt-1 block w-full rounded-lg border-gray-200 shadow-sm focus:border-green-500 focus:ring-green-500 transition duration-200"
+                          aria-label="Station longitude"
                         />
                       </div>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Connector Types</label>
+                      <label className="block text-sm font-medium text-gray-700" htmlFor="connectorTypes">Connector Types</label>
                       <input
+                        id="connectorTypes"
                         name="connectorTypes"
                         value={form.connectorTypes.join(', ')}
                         onChange={handleChange}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                        className="mt-1 block w-full rounded-lg border-gray-200 shadow-sm focus:border-green-500 focus:ring-green-500 transition duration-200"
+                        aria-label="Connector types"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Amenities</label>
+                      <label className="block text-sm font-medium text-gray-700" htmlFor="amenities">Amenities</label>
                       <input
+                        id="amenities"
                         name="amenities"
                         value={form.amenities.join(', ')}
                         onChange={handleChange}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                        className="mt-1 block w-full rounded-lg border-gray-200 shadow-sm focus:border-green-500 focus:ring-green-500 transition duration-200"
+                        aria-label="Amenities"
                       />
                     </div>
                   </div>
                   <div className="flex gap-3 mt-6">
-                    <button
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
                       onClick={handleSave}
-                      className="flex-1 bg-indigo-600 text-white rounded-lg py-2 hover:bg-indigo-700 transition-colors"
+                      className="flex-1 bg-green-600 text-white rounded-lg py-2 hover:bg-green-700 transition-colors shadow-sm disabled:bg-green-400 disabled:cursor-not-allowed"
+                      disabled={loading}
+                      aria-label="Save station changes"
                     >
-                      Save Changes
-                    </button>
-                    <button
+                      {loading ? (
+                        <span className="flex items-center justify-center">
+                          <svg className="animate-spin h-5 w-5 mr-2 text-white" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                          </svg>
+                          Saving...
+                        </span>
+                      ) : (
+                        'Save Changes'
+                      )}
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
                       onClick={() => setEditing(false)}
-                      className="flex-1 bg-gray-200 text-gray-700 rounded-lg py-2 hover:bg-gray-300 transition-colors"
+                      className="flex-1 bg-gray-200 text-gray-700 rounded-lg py-2 hover:bg-gray-300 transition-colors shadow-sm"
+                      aria-label="Cancel editing"
                     >
                       Cancel
-                    </button>
+                    </motion.button>
                   </div>
-                </div>
+                </motion.div>
               )}
             </>
           )}
         </div>
 
         {/* Footer */}
-        <div className="p-6 border-t bg-gray-50">
-          <button
+        <div className="p-6 border-t bg-green-50">
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={onClose}
-            className="w-full bg-gray-200 text-gray-700 rounded-lg py-2 hover:bg-gray-300 transition-colors"
+            className="w-full bg-gray-200 text-gray-700 rounded-lg py-2 hover:bg-gray-300 transition-colors shadow-sm"
+            aria-label="Close modal"
           >
             Close
-          </button>
+          </motion.button>
         </div>
 
         <ConfirmModal
@@ -531,7 +608,7 @@ const StationDetailsModal = ({
         {initStation && <ConfirmInitModal stationId={initStation} onClose={() => setInitStation(null)} />}
         <SuccessPopup message={popup.message} type={popup.type} onClose={() => setPopup({ message: '', type: 'success' })} />
       </div>
-    </div>
+    </motion.div>
   );
 };
 
