@@ -84,6 +84,7 @@ const StationSlots = () => {
         body: JSON.stringify({
           StationId: slot.stationId,
           SlotId: slot.id,
+          NIC: slot.user?.NIC || slot.user?.nic || slot.user?.NICNumber || slot.userId || undefined,
         }),
       });
       if (!res.ok) {

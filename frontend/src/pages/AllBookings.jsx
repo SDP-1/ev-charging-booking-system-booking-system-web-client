@@ -11,6 +11,9 @@ import ConfirmCancelModal from '../components/modals/ConfirmCancelModal';
 const AllBookings = () => {
   const { user } = useAuth();
   const [bookings, setBookings] = useState([]);
+  const [stationNames, setStationNames] = useState({});
+  const [userNames, setUserNames] = useState({});
+  const [slotTimes, setSlotTimes] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filterUserId, setFilterUserId] = useState('');
@@ -40,6 +43,83 @@ const AllBookings = () => {
       fetchBookings();
     }
   }, [filterUserId, user]);
+
+  // Fetch related display data (station names, user names, slot times) when bookings change
+  useEffect(() => {
+    const BASE = import.meta.env.VITE_API_BASE_URL;
+    const token = localStorage.getItem('token');
+
+    if (!bookings || bookings.length === 0) return;
+
+    const uniq = (arr) => Array.from(new Set(arr.filter(Boolean)));
+
+    const stationIds = uniq(bookings.map(b => b.stationId));
+    const userIds = uniq(bookings.map(b => b.userId));
+    const slotIds = uniq(bookings.map(b => b.slotId));
+
+    // Stations
+    const missingStations = stationIds.filter(id => id && !stationNames[id]);
+    if (missingStations.length > 0) {
+      Promise.allSettled(missingStations.map(id =>
+        fetch(`${BASE}/chargingstation/${id}`, { headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) } })
+          .then(r => r.ok ? r.json() : null)
+      )).then(results => {
+        const map = {};
+        results.forEach((res, idx) => {
+          const id = missingStations[idx];
+          if (res.status === 'fulfilled' && res.value) map[id] = res.value.name || res.value.Name || id;
+          else map[id] = id;
+        });
+        setStationNames(prev => ({ ...prev, ...map }));
+      }).catch(() => {});
+    }
+
+    // Users
+    const missingUsers = userIds.filter(id => id && !userNames[id]);
+    if (missingUsers.length > 0) {
+      Promise.allSettled(missingUsers.map(id =>
+        fetch(`${BASE}/user/${id}`, { headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) } })
+          .then(r => r.ok ? r.json() : null)
+      )).then(results => {
+        const map = {};
+        results.forEach((res, idx) => {
+          const id = missingUsers[idx];
+          if (res.status === 'fulfilled' && res.value) map[id] = res.value.username || res.value.Username || res.value.userName || res.value.fullName || id;
+          else map[id] = id;
+        });
+        setUserNames(prev => ({ ...prev, ...map }));
+      }).catch(() => {});
+    }
+
+    // Slots
+    const missingSlots = slotIds.filter(id => id && !slotTimes[id]);
+    if (missingSlots.length > 0) {
+      Promise.allSettled(missingSlots.map(id =>
+        fetch(`${BASE}/chargingslot/${id}`, { headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) } })
+          .then(r => r.ok ? r.json() : null)
+      )).then(results => {
+        const map = {};
+        results.forEach((res, idx) => {
+          const id = missingSlots[idx];
+          if (res.status === 'fulfilled' && res.value) {
+            try {
+              const s = new Date(res.value.startTime || res.value.StartTime || res.value.start || res.value.Start);
+              const e = new Date(res.value.endTime || res.value.EndTime || res.value.end || res.value.End);
+              const fmtDate = (d) => d.toLocaleString([], { month: 'short', day: '2-digit', year: 'numeric' });
+              const fmtTime = (d) => d.toLocaleString([], { hour: '2-digit', minute: '2-digit' });
+              map[id] = { start: s.toISOString(), end: e.toISOString(), formatted: `${fmtDate(s)}, ${fmtTime(s)} → ${fmtTime(e)}` };
+            } catch (e) {
+              map[id] = null;
+            }
+          } else {
+            map[id] = null;
+          }
+        });
+        setSlotTimes(prev => ({ ...prev, ...map }));
+      }).catch(() => {});
+    }
+
+  }, [bookings]);
 
   const filteredBookings = useMemo(() => {
     let filtered = bookings;
@@ -425,10 +505,10 @@ const AllBookings = () => {
             <thead className="bg-green-50">
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Booking ID</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">EV Owner ID</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">EV Owner</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Station</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Slot ID</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reservation Time</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Slot Time</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reservation Date</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
@@ -506,15 +586,11 @@ const AllBookings = () => {
                         {String(booking.id).substring(0, 8)}...
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 truncate max-w-0" title={booking.userId}>
-                        {String(booking.userId).substring(0, 8)}...
+                        {userNames[booking.userId] || (booking.userId ? String(booking.userId).substring(0,8)+'...' : '—')}
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-800">{booking.stationId}</td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm font-mono text-gray-600 truncate max-w-0" title={booking.slotId}>
-                        {String(booking.slotId).substring(0, 8)}...
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
-                        {new Date(booking.reservationDateTime).toLocaleString()}
-                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-800">{stationNames[booking.stationId] || booking.stationId}</td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{slotTimes[booking.slotId]?.formatted || '—'}</td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{new Date(booking.reservationDateTime).toLocaleString([], { month: 'short', day: '2-digit', year: 'numeric', hour: undefined })}</td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm">
                         <StatusPill status={currentStatus} />
                       </td>

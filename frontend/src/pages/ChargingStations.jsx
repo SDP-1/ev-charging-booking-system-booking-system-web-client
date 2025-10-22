@@ -385,7 +385,7 @@ const ChargingStations = () => {
       )}
       {initStation && (
         <ConfirmInitModal
-          station={initStation}
+          stationId={initStation}
           onClose={() => setInitStation(null)}
           onConfirm={() => setInitStation(null)}
         />
