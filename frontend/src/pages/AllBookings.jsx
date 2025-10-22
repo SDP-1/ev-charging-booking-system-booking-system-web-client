@@ -17,7 +17,8 @@ const AllBookings = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filterUserId, setFilterUserId] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  // status filter removed per request
   const [filterDateFrom, setFilterDateFrom] = useState('');
   const [filterDateTo, setFilterDateTo] = useState('');
   const [showCancelModal, setShowCancelModal] = useState(false);
@@ -30,7 +31,8 @@ const AllBookings = () => {
       setLoading(true);
       setError(null);
       try {
-        const data = await getAllBookings(filterUserId || null);
+        // Always fetch all bookings from server; perform text search client-side
+        const data = await getAllBookings(null);
         setBookings(data);
       } catch (err) {
         setError(err.message);
@@ -42,7 +44,7 @@ const AllBookings = () => {
     if (user && user.role === 'Backoffice') {
       fetchBookings();
     }
-  }, [filterUserId, user]);
+  }, [user]);
 
   // Fetch related display data (station names, user names, slot times) when bookings change
   useEffect(() => {
@@ -122,9 +124,24 @@ const AllBookings = () => {
   }, [bookings]);
 
   const filteredBookings = useMemo(() => {
-    let filtered = bookings;
-    if (filterStatus !== 'all') {
-      filtered = filtered.filter(b => getStatus(b) === filterStatus);
+    let filtered = Array.isArray(bookings) ? bookings.filter(Boolean) : [];
+    // Text search: apply only if query has more than 2 characters
+    if (searchQuery && searchQuery.trim().length > 2) {
+      const q = searchQuery.trim().toLowerCase();
+      filtered = filtered.filter(b => {
+        try {
+          const ownerName = userNames[b.userId] || '';
+          const stationName = stationNames[b.stationId] || '';
+          const bookingId = String(b.id || b._id || b.bookingId || '').toLowerCase();
+          return (
+            ownerName.toLowerCase().includes(q) ||
+            stationName.toLowerCase().includes(q) ||
+            bookingId.includes(q)
+          );
+        } catch (e) {
+          return false;
+        }
+      });
     }
     if (filterDateFrom || filterDateTo) {
       const fromDate = filterDateFrom ? new Date(filterDateFrom).toISOString() : null;
@@ -134,6 +151,7 @@ const AllBookings = () => {
       }
       const toDate = toDateObj ? toDateObj.toISOString() : null;
       filtered = filtered.filter(b => {
+        if (!b || !b.reservationDateTime) return false;
         const bookingDate = new Date(b.reservationDateTime).toISOString();
         if (fromDate && bookingDate < fromDate) return false;
         if (toDate && bookingDate > toDate) return false;
@@ -141,9 +159,10 @@ const AllBookings = () => {
       });
     }
     return filtered;
-  }, [bookings, filterStatus, filterDateFrom, filterDateTo]);
+  }, [bookings, filterDateFrom, filterDateTo]);
 
   const getStatus = (booking) => {
+    if (!booking) return 'Pending';
     if (booking.canceled) return 'Canceled';
     if (booking.completed) return 'Completed';
     if (booking.confirmed) return 'Confirmed';
@@ -152,7 +171,7 @@ const AllBookings = () => {
   };
 
   const stats = useMemo(() => {
-    const allBookings = bookings || [];
+    const allBookings = Array.isArray(bookings) ? bookings.filter(Boolean) : [];
     return {
       total: allBookings.length,
       pending: allBookings.filter(b => getStatus(b) === 'Pending').length,
@@ -167,16 +186,17 @@ const AllBookings = () => {
 
   const clearFilters = () => {
     setFilterUserId('');
-    setFilterStatus('all');
+    // status removed
     setFilterDateFrom('');
     setFilterDateTo('');
+    setSearchQuery('');
   };
 
   const refreshData = async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await getAllBookings(filterUserId || null);
+      const data = await getAllBookings(null);
       setBookings(data);
     } catch (err) {
       setError(err.message);
@@ -219,7 +239,7 @@ const AllBookings = () => {
         },
       });
       if (!res.ok) throw new Error(`Failed to update status (${res.status})`);
-      const data = await getAllBookings(filterUserId || null);
+  const data = await getAllBookings(null);
       setBookings(data);
     } catch (err) {
       setError(err.message || 'Failed to update booking status.');
@@ -238,7 +258,7 @@ const AllBookings = () => {
         },
       });
       if (!res.ok) throw new Error(`Failed to cancel booking (${res.status})`);
-      const data = await getAllBookings(filterUserId || null);
+  const data = await getAllBookings(null);
       setBookings(data);
     } catch (err) {
       setError(err.message || 'Failed to cancel booking.');
@@ -419,34 +439,15 @@ const AllBookings = () => {
               <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
               <input
                 type="text"
-                placeholder="Search by User ID..."
-                value={filterUserId}
-                onChange={(e) => setFilterUserId(e.target.value)}
+                placeholder="Search by EV owner name, station name or booking id..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition"
                 disabled={loading}
-                aria-label="Search bookings by user ID"
+                aria-label="Search bookings by owner or station or booking id"
               />
             </div>
-            <div className="flex items-center space-x-3 flex-1 md:flex-none">
-              <label htmlFor="status-filter" className="text-sm font-medium text-gray-700">
-                Status:
-              </label>
-              <select
-                id="status-filter"
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                className="flex-1 md:w-40 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition"
-                disabled={loading}
-                aria-label="Filter bookings by status"
-              >
-                <option value="all">All Statuses</option>
-                <option value="Pending">Pending</option>
-                <option value="Approved">Approved</option>
-                <option value="Confirmed">Confirmed</option>
-                <option value="Completed">Completed</option>
-                <option value="Canceled">Canceled</option>
-              </select>
-            </div>
+            {/* status filter removed */}
             <div className="flex items-center gap-3 flex-1 md:flex-none">
               <label className="text-sm font-medium text-gray-700">Date Range:</label>
               <div className="flex gap-2 items-center">
@@ -475,7 +476,7 @@ const AllBookings = () => {
                 whileTap={{ scale: 0.95 }}
                 onClick={clearFilters}
                 className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition disabled:opacity-50"
-                disabled={loading || (!filterUserId && filterStatus === 'all' && !filterDateFrom && !filterDateTo)}
+                disabled={loading || (!searchQuery && !filterDateFrom && !filterDateTo)}
                 aria-label="Clear all filters"
               >
                 Clear
@@ -525,14 +526,14 @@ const AllBookings = () => {
                   </td>
                 </tr>
               ) : (
-                filteredBookings.map((booking, index) => {
+                filteredBookings.filter(Boolean).map((booking, index) => {
                   const currentStatus = getStatus(booking);
                   const reservationTime = new Date(booking.reservationDateTime);
                   const now = new Date();
                   const timeDiffMs = reservationTime - now;
                   const isFutureReservation = timeDiffMs > 0;
                   const hoursUntilReservation = timeDiffMs / (1000 * 60 * 60);
-                  const canCancel = ['Pending', 'Approved'].includes(currentStatus) && hoursUntilReservation >= 3;
+                  const canCancel = ['Pending', 'Approved'].includes(currentStatus) && hoursUntilReservation >= 12;
 
                   const actions = [];
                   switch (currentStatus) {
@@ -623,7 +624,7 @@ const AllBookings = () => {
                                 setShowCancelModal(true);
                               }}
                               disabled={!canCancel}
-                              title={canCancel ? 'Cancel Booking' : 'Cannot cancel less than 3 hours before reservation'}
+                              title={canCancel ? 'Cancel Booking' : 'Cannot cancel less than 12 hours before reservation'}
                               className={canCancel ? 'bg-red-100 text-red-700 hover:bg-red-200 border border-red-200' : 'bg-gray-100 text-gray-500 cursor-not-allowed'}
                             />
                           )}

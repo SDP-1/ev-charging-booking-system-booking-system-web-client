@@ -97,7 +97,7 @@ const BookingDetailsModal = ({ isOpen, onClose, booking }) => {
   const canApprove = currentStatus === 'Pending';
   const canConfirm = currentStatus === 'Approved';
   const canComplete = currentStatus === 'Confirmed';
-  const canCancel = ['Pending', 'Approved'].includes(currentStatus) && hoursUntilReservation >= 3;
+  const canCancel = ['Pending', 'Approved'].includes(currentStatus) && hoursUntilReservation >= 12;
   const canReopen = currentStatus === 'Canceled' && isFutureReservation;
 
   return (
@@ -233,9 +233,9 @@ const BookingDetailsModal = ({ isOpen, onClose, booking }) => {
                   <div className="bg-gray-50 p-3 rounded-xl border border-green-200">
                     <p className="text-sm text-gray-900 mb-1" aria-label="Reservation Date and Time">{new Date(booking.reservationDateTime).toLocaleString()}</p>
                     <div className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${
-                      hoursUntilReservation >= 3 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                    }`}>
-                      {hoursUntilReservation >= 3 ? `⏰ ${hoursUntilReservation.toFixed(1)} hours remaining` : '⚠️ Less than 3 hours remaining'}
+                      hoursUntilReservation >= 12 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                      }`}>
+                        {hoursUntilReservation >= 12 ? `⏰ ${hoursUntilReservation.toFixed(1)} hours remaining` : '⚠️ Less than 12 hours remaining'}
                     </div>
                   </div>
                 </div>
@@ -278,10 +278,10 @@ const BookingDetailsModal = ({ isOpen, onClose, booking }) => {
                   { label: 'Approve Booking', condition: canApprove, reason: 'Available only for Pending bookings' },
                   { label: 'Confirm Arrival', condition: canConfirm, reason: 'Available only for Approved bookings' },
                   { label: 'Mark as Complete', condition: canComplete, reason: 'Available only for Confirmed bookings' },
-                  { 
+                    { 
                     label: 'Cancel Booking', 
                     condition: canCancel, 
-                    reason: `Available for Pending/Approved with ≥3 hours remaining (${hoursUntilReservation.toFixed(1)} hrs left)` 
+                    reason: `Available for Pending/Approved with ≥12 hours remaining (${hoursUntilReservation.toFixed(1)} hrs left)` 
                   },
                   { 
                     label: 'Reopen Booking', 
